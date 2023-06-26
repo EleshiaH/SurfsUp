@@ -29,8 +29,6 @@ station = Base.classes.station
 # reflect an existing database into a new model
 
 # Create our session (link) from Python to the DB
-# session=Session(engine)
-# results = session.query(measurement, station).all()
 
 # session.close()
 
@@ -39,6 +37,12 @@ station = Base.classes.station
 #################################################
 
 app = Flask(__name__)
+
+
+
+#################################################
+# Flask Routes
+#################################################
 
 @app.route("/")
 def home():
@@ -55,7 +59,11 @@ def home():
 @app.route("/api/v1.0/precipitation")
 def precipitation():
     session = Session(engine)
-    results=session.query(measurement.date).all()
+    results=session.query(measurement.date, func.avg(measurement.prcp)) \
+.filter(measurement.date <= '2017-08-23') \
+.filter(measurement.date >= '2016-08-23') \
+.group_by(func.strftime('%m', measurement.date)) \
+.all()
     session.close()
 
     all_dates = list(np.ravel(results))
@@ -72,17 +80,50 @@ def stations():
 
     return jsonify(all_stations)
 
-# @app.route("/api/v1.0/tobs")
+@app.route("/api/v1.0/tobs")
+def temperatures():
+    session = Session(engine)
+    results = session.query(measurement.date, measurement.tobs) \
+.filter(measurement.station == 'USC00519281')\
+.filter(measurement.date <= '2017-08-23') \
+.filter(measurement.date >= '2016-08-23') \
+.order_by(func.strftime('%m', measurement.date)) \
+.all()
+    session.close()
 
-# @app.route("/api/v1.0/<start>")
+    all_temps = list(np.ravel(results))
 
-# @app.route("/api/v1.0/<start>/<end>")
+    return jsonify(all_temps)
+
+@app.route("/api/v1.0/<start>")
+def start():
+    session = Session(engine)
+    results = session.query(measurement.date, func.max(measurement.tobs), func.min(measurement.tobs), func.avg(measurement.tobs)) \
+.filter(measurement.station == 'USC00519281')\
+.filter(measurement.date >= '2016-08-23') \
+.all()
+    session.close()
+    
+    start_date = list(np.ravel(results))
+
+    return jsonify(start_date)
+
+@app.route("/api/v1.0/<start>/<end>")
+def start():
+    session = Session(engine)
+    results = session.query(measurement.date, func.max(measurement.tobs), func.min(measurement.tobs), func.avg(measurement.tobs)) \
+.filter(measurement.station == 'USC00519281')\
+.filter(measurement.date <= '2017-08-23') \
+.filter(measurement.date >='2016-08-23')\
+.all()
+    session.close()
+    
+    end_date = list(np.ravel(results))
+
+    return jsonify(end_date)
 
 if __name__ == '__main__':
     app.run (debug=True)
 
 
 
-#################################################
-# Flask Routes
-#################################################
